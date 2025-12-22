@@ -7,6 +7,14 @@
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="gradleJvm" value="ms-17" />
       </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/insajang-backend" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/insajang-backend" />
+          </set>
+        </option>
+      </GradleProjectSettings>
     </option>
   </component>
 </project>
