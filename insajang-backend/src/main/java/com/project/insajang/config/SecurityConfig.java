@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Stateless 환경(REST API) 대응을 위한 CSRF 비활성화
                 .authorizeHttpRequests(auth -> auth
                         // 로그인 관련 엔드포인트 및 공통 리소스 허용
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/error").permitAll()
+                        .requestMatchers("/login/**", "/oauth2/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
