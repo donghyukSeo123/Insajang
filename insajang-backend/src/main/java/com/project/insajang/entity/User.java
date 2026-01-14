@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
  * 사용자 정보 엔티티
  * 페이스북 OAuth2를 통해 수집된 정보와 인스타그램 API 호출을 위한 액세스 토큰을 관리합니다.
@@ -31,4 +33,10 @@ public class User {
     private String instagramBusinessAccountId; // 연결된 인스타그램 프로페셔널 계정 ID
 
     private String linkedPageId; // 인스타그램 계정과 연결된 페이스북 페이지 ID
+
+    private LocalDateTime lastSyncedAt; // 마지막 동기화시간
+
+    private LocalDateTime tokenExpiresAt; // 토큰 만료시간
+
+
 }

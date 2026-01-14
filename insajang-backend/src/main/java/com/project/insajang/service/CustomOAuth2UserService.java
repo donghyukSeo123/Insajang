@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * OAuth2 사용자 정보 처리 서비스
- * 리소스 서버(Facebook)로부터 전달받은 정보를 서비스 로직으로 연계합니다.
+ * 리소스 서버(Facebook)로부터 전달받은 정보를 서비스 로직으로 연계
  */
 @Slf4j
 @Service

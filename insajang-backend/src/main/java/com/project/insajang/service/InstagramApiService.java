@@ -30,40 +30,39 @@ public class InstagramApiService {
     public void getAndSaveInstagramInfo(User user) {
         String accessToken = user.getAccessToken();
         try {
-            // 1. 페이스북 "나의 페이지 목록" 조회 API 주소 생성
+            // 1. 페이지 목록을 가져올 때 'instagram_business_account' 필드를 명시적으로 요청합니다.
             String url = UriComponentsBuilder.fromHttpUrl("https://graph.facebook.com/v18.0/me/accounts")
+                    .queryParam("fields", "name,id,instagram_business_account") // 이 부분이 핵심!
                     .queryParam("access_token", accessToken)
                     .toUriString();
-            System.out.println(url);
-            // 2. API 호출
+
+            log.info("### 페이지 목록 조회 URL: {} ###", url);
+
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data");
 
             if (data != null && !data.isEmpty()) {
-                String pageId = (String) data.get(0).get("id");
-                log.info("### 연결된 페이지 ID 발견: {} ###", pageId);
+                // 여러 페이지 중 인스타 계정이 연결된 첫 번째 페이지를 찾습니다.
+                for (Map<String, Object> page : data) {
+                    String pageId = (String) page.get("id");
+                    Map<String, Object> igAccount = (Map<String, Object>) page.get("instagram_business_account");
 
-                // 3. 페이지 ID를 이용해 다시 "인스타그램 비즈니스 계정 ID" 조회
-                String igUrl = UriComponentsBuilder.fromHttpUrl("https://graph.facebook.com/v18.0/" + pageId)
-                        .queryParam("fields", "instagram_business_account")
-                        .queryParam("access_token", accessToken)
-                        .toUriString();
+                    if (igAccount != null) {
+                        String igId = (String) igAccount.get("id");
+                        log.info("### [성공] 페이지명: {}, 인스타ID: {} ###", page.get("name"), igId);
 
-                Map<String, Object> igResponse = restTemplate.getForObject(igUrl, Map.class);
-                Map<String, Object> igAccount = (Map<String, Object>) igResponse.get("instagram_business_account");
-
-                if (igAccount != null) {
-                    String igId = (String) igAccount.get("id");
-                    log.info("### 인스타그램 비즈니스 계정 ID 발굴 성공: {} ###", igId);
-
-                    // 4. 찾은 정보를 DB에 저장
-                    user.setLinkedPageId(pageId);
-                    user.setInstagramBusinessAccountId(igId);
-                    userRepository.save(user);
+                        user.setLinkedPageId(pageId);
+                        user.setInstagramBusinessAccountId(igId);
+                        userRepository.save(user);
+                        return; // 찾았으면 종료
+                    }
                 }
+                log.warn("### 연결된 페이지는 찾았으나, 그 페이지에 연결된 인스타 비즈니스 계정이 없습니다. ###");
+            } else {
+                log.warn("### 이 계정이 관리자로 등록된 페이스북 페이지가 하나도 없습니다. ###");
             }
         } catch (Exception e) {
-            log.error("### 인스타 정보 캐내기 실패: {} ###", e.getMessage());
+            log.error("### 인스타 정보 캐내기 에러: {} ###", e.getMessage());
         }
     }
 }
