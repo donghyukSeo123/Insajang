@@ -25,6 +25,8 @@ public class InstagramInsightService {
         String url = "https://graph.facebook.com/v18.0/" + businessId +
                 "/insights?metric=impressions,reach,profile_views&period=day&access_token=" + token;
 
+        System.out.println(url);
+
         InstagramInsightResponse response = restTemplate.getForObject(url, InstagramInsightResponse.class);
 
         if (response != null && response.getData() != null) {
