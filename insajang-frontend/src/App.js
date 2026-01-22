@@ -45,6 +45,8 @@ import createCache from "@emotion/cache";
 
 // Material Dashboard 2 React routes
 import routes from "routes";
+//로그인페이지
+import LoginPage from "layouts/authentication/sign-in";
 
 // Material Dashboard 2 React contexts
 import { useMaterialUIController, setMiniSidenav, setOpenConfigurator } from "context";
@@ -54,6 +56,7 @@ import brandWhite from "assets/images/logo-ct.png";
 import brandDark from "assets/images/logo-ct-dark.png";
 
 export default function App() {
+  const isAuthenticated = !!localStorage.getItem("accessToken");
   const [controller, dispatch] = useMaterialUIController();
   const {
     miniSidenav,
@@ -146,34 +149,12 @@ export default function App() {
     </MDBox>
   );
 
-  return direction === "rtl" ? (
-    <CacheProvider value={rtlCache}>
-      <ThemeProvider theme={darkMode ? themeDarkRTL : themeRTL}>
-        <CssBaseline />
-        {layout === "dashboard" && (
-          <>
-            <Sidenav
-              color={sidenavColor}
-              brand={(transparentSidenav && !darkMode) || whiteSidenav ? brandDark : brandWhite}
-              routes={routes}
-              onMouseEnter={handleOnMouseEnter}
-              onMouseLeave={handleOnMouseLeave}
-            />
-            <Configurator />
-            {configsButton}
-          </>
-        )}
-        {layout === "vr" && <Configurator />}
-        <Routes>
-          {getRoutes(routes)}
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Routes>
-      </ThemeProvider>
-    </CacheProvider>
-  ) : (
+  return (
     <ThemeProvider theme={darkMode ? themeDark : theme}>
       <CssBaseline />
-      {layout === "dashboard" && (
+
+      {/* 로그인 상태일 때만 사이드바 */}
+      {isAuthenticated && (
         <>
           <Sidenav
             color={sidenavColor}
@@ -182,14 +163,19 @@ export default function App() {
             onMouseEnter={handleOnMouseEnter}
             onMouseLeave={handleOnMouseLeave}
           />
-          <Configurator />
           {configsButton}
         </>
       )}
-      {layout === "vr" && <Configurator />}
+
       <Routes>
-        {getRoutes(routes)}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        {/* 로그인 페이지 */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* 로그인한 사용자만 접근 */}
+        {isAuthenticated && getRoutes(routes)}
+
+        {/* 나머지는 전부 로그인으로 */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </ThemeProvider>
   );
