@@ -21,7 +21,7 @@ import signInLogo from "assets/images/logos/sign_in_logo.png";
 function Basic() {
   const [rememberMe, setRememberMe] = useState(false);
   const handleSetRememberMe = () => setRememberMe(!rememberMe);
-
+  
   return (
     <BasicLayout image={bgImage}>
       <Card
@@ -64,11 +64,17 @@ function Basic() {
           {/* ===== 로그인 폼 ===== */}
           <MDBox component="form">
             <MDBox mb={2}>
-              <MDInput type="email" label="이메일" fullWidth />
+              <MDInput type="email" label="이메일" fullWidth 
+                variant="outlined"
+                size="small"
+              />
             </MDBox>
 
             <MDBox mb={2}>
-              <MDInput type="password" label="비밀번호" fullWidth />
+              <MDInput type="password" label="비밀번호" fullWidth 
+                variant="outlined"
+                size="small"
+              />
             </MDBox>
 
             <MDBox display="flex" alignItems="center" ml={-1}>
@@ -94,7 +100,7 @@ function Basic() {
                 계정이 없으신가요?{" "}
                 <MDTypography
                   component={Link}
-                  to="/authentication/sign-up"
+                  to="/signup"
                   variant="button"
                   color="info"
                   fontWeight="medium"
