@@ -47,6 +47,7 @@ import createCache from "@emotion/cache";
 import routes from "routes";
 //로그인페이지
 import LoginPage from "layouts/authentication/sign-in";
+import SignupPage from "layouts/authentication/sign-up";
 
 // Material Dashboard 2 React contexts
 import { useMaterialUIController, setMiniSidenav, setOpenConfigurator } from "context";
@@ -170,6 +171,8 @@ export default function App() {
       <Routes>
         {/* 로그인 페이지 */}
         <Route path="/login" element={<LoginPage />} />
+        {/* 회원가입페이지 */}
+        <Route path="/signup" element={<SignupPage />} />
 
         {/* 로그인한 사용자만 접근 */}
         {isAuthenticated && getRoutes(routes)}

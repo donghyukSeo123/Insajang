@@ -30,6 +30,8 @@ import MDTypography from "components/MDTypography";
 import MDInput from "components/MDInput";
 import MDButton from "components/MDButton";
 
+// Authentication layout components
+import BasicLayout from "layouts/authentication/components/BasicLayout";
 
 // Images
 import bgImage from "assets/images/bg-sign-in-basic.jpeg";
@@ -40,6 +42,7 @@ function Basic() {
   const handleSetRememberMe = () => setRememberMe(!rememberMe);
 
   return (
+    <BasicLayout image={bgImage}>
       <Card>
         <MDBox pt={4} pb={3} px={3}>
           <MDBox component="form" role="form">
@@ -71,7 +74,7 @@ function Basic() {
                 Don&apos;t have an account?{" "}
                 <MDTypography
                   component={Link}
-                  to="/authentication/sign-up"
+                  to="layouts/authentication/sign-up"
                   variant="button"
                   color="info"
                   fontWeight="medium"
@@ -84,6 +87,7 @@ function Basic() {
           </MDBox>
         </MDBox>
       </Card>
+    </BasicLayout>
   );
 }
 
