@@ -3,6 +3,7 @@ package com.project.insajang.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -26,10 +27,15 @@ public class SecurityConfig {
                 // 3. API 경로 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         // 이 주소는 로그인 없이도 들어올 수 있게 열어줌!
-                        .requestMatchers("/api/user/email-verification").permitAll()
+                        .requestMatchers("/api/user/**").permitAll()
                         .anyRequest().authenticated()
                 );
 
         return http.build();
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

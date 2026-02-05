@@ -1,25 +1,34 @@
 package com.project.insajang.user.service;
 
+import com.project.insajang.user.dto.UserJoinRequest;
+import com.project.insajang.user.entity.User;
+import com.project.insajang.user.repository.UserRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final JavaMailSender mailSender;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     //인증번호와 생성시간을 함께 저장
     private final Map<String, VerificationData> verificationStorage = new HashMap<>();
@@ -70,16 +79,75 @@ public class UserService {
             helper.setText(htmlContent, true); // true를 넣어야 HTML로 렌더링됩니다.
             helper.setFrom(fromEmail, "컨텐츠메이커스튜디오");
 
-            System.out.println("---------------------------------------");
-            System.out.println("인사장님이 설정한 비번: " + ((org.springframework.mail.javamail.JavaMailSenderImpl) mailSender).getPassword());
-            System.out.println("---------------------------------------");
-
             mailSender.send(message);
             System.out.println("HTML 메일 발송 완료! 인증번호: " + code);
 
         } catch (MessagingException | UnsupportedEncodingException e) {
             throw new RuntimeException("메일 발송 실패: " + e.getMessage());
         }
+    }
+
+    public boolean confirmCode(String email, String code) {
+        VerificationData info = verificationStorage.get(email);
+
+        // 1. 해당 이메일로 발송된 기록이 있는지 확인
+        if (info == null) {
+            return false;
+        }
+
+        // 2. 시간 만료 확인 (현재 시간 - 생성 시간 > 3분)
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - info.getCreatedAt() > EXPIRED_TIME) {
+            verificationStorage.remove(email); // 만료됐으면 삭제
+            return false;
+        }
+
+        // 3. 코드 일치 확인
+        boolean isMatch = info.getCode().equals(code);
+
+        if (isMatch) {
+            verificationStorage.remove(email); // 인증 성공 후 데이터 삭제 (1회용)
+            return true;
+        }
+
+        return false;
+
+    }
+
+
+    // UserService 내부
+    public void removeExpiredVerificationCodes() {
+        long currentTime = System.currentTimeMillis();
+
+        // 맵을 돌면서 만료된 녀석들만 골라 삭제
+        verificationStorage.entrySet().removeIf(entry ->
+                (currentTime - entry.getValue().getCreatedAt()) > EXPIRED_TIME
+        );
+
+        log.info("만료된 인증번호 청소 완료");
+    }
+
+    @Transactional
+    public void saveUser(UserJoinRequest request) {
+        // 1. 닉네임 중복 체크 (2번 기능을 여기서도 활용)
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다, 인사장님!");
+        }
+
+        // 2. 비밀번호 암호화 (BCrypt)
+        // 리액트에서 온 생비밀번호를 해시값으로 변환하여 password_hash 컬럼에 맞춤
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
+        // 3. DTO -> Entity 변환 및 저장
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(encodedPassword) // DB 컬럼 password_hash에 매핑
+                .name(request.getName())
+                .nickname(request.getNickname())
+                .role("USER") // 기본 권한 설정
+                .build();
+
+        userRepository.save(user);
     }
 
     @Getter
