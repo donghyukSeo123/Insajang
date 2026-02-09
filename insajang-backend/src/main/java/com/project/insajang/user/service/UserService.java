@@ -131,7 +131,7 @@ public class UserService {
     public void saveUser(UserJoinRequest request) {
         // 1. 닉네임 중복 체크 (2번 기능을 여기서도 활용)
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다, 인사장님!");
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다");
         }
 
         // 2. 비밀번호 암호화 (BCrypt)
@@ -148,6 +148,26 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public boolean existsByNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
+    }
+
+    public User login(String email, String password) {
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user != null) {
+            // 2. matches(입력한 비번, DB에 저장된 암호화된 비번) 비교
+            if (passwordEncoder.matches(password, user.getPasswordHash())) {
+                return user; // 일치하면 유저 반환
+            }
+        }
+        return null; // 틀리면 null
     }
 
     @Getter
