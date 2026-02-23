@@ -1,29 +1,30 @@
-package com.project.insajang.config; // 프로젝트 패키지 경로에 맞게 꼭 수정하세요!
+package com.project.insajang.config;
 
+import com.project.insajang.user.entity.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
 
-    // 컨텐츠메이커스튜디오 전용 시크릿 키 (32자 이상의 안전한 키)
     private final String secretString = "contents-maker-studio-secure-key-2026-auth";
     private final Key secretKey = Keys.hmacShaKeyFor(secretString.getBytes());
-
-    // 토큰 유효 시간: 1시간
     private final long validityInMilliseconds = 3600000;
 
-    /**
-     * 유저의 이메일을 기반으로 엑세스 토큰을 생성합니다.
-     */
-    public String createToken(String email) {
+    // 토큰 생성 (userId 주머니에 넣기)
+    public String createToken(Long userId, String email) {
         Claims claims = Jwts.claims().setSubject(email);
+        claims.put("userId", userId);
+
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
 
@@ -31,13 +32,21 @@ public class JwtTokenProvider {
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(secretKey, SignatureAlgorithm.HS256) // HMAC SHA256 알고리즘
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    /**
-     * 토큰에서 유저 정보를 추출할 때 사용
-     */
+    // 토큰에서 userId 꺼내기
+    public Long getUserId(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("userId", Long.class);
+    }
+
+
     public String getEmail(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
@@ -45,5 +54,24 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+
+    public Authentication getAuthentication(String token) {
+        Long userId = getUserId(token);
+
+        UserPrincipal principal = new UserPrincipal(userId);
+
+        return new UsernamePasswordAuthenticationToken(principal, "", Collections.emptyList());
+    }
+
+    // 토큰 유효성 검사 메서드 (필터에서 쓰임)
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

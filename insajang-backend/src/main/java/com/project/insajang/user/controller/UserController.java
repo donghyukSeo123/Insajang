@@ -79,7 +79,7 @@ public class UserController {
             User user = userService.login(request.getEmail(),request.getPassword());
 
         if (user != null) {
-            String token = jwtTokenProvider.createToken(user.getEmail());
+            String token = jwtTokenProvider.createToken(user.getId(),user.getEmail());
 
             Map<String, String> response = new HashMap<>();
             response.put("accessToken", token);
