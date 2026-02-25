@@ -1,6 +1,8 @@
 package com.project.insajang.project.controller;
 
 import com.project.insajang.project.dto.ProjectCreateDto;
+import com.project.insajang.project.dto.ProjectResponseDto;
+import com.project.insajang.project.service.ProjectService;
 import com.project.insajang.user.entity.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,13 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/project")
+@RequestMapping("/api/projects")
 @RequiredArgsConstructor
 public class ProjectController {
-//    private final ProjectService projectService;
+    private final ProjectService projectService;
 
     // 1. 프로젝트 생성 (POST /api/projects)
-    @PostMapping
+    @PostMapping("/createProject")
     public ResponseEntity<ProjectCreateDto> createProject(
             @RequestBody ProjectCreateDto createDto,
             @AuthenticationPrincipal UserPrincipal userPrincipal // 로그인된 사용자 정보
@@ -28,7 +30,7 @@ public class ProjectController {
 
         log.info(String.valueOf(userPrincipal.getId()));
         // 서비스 계층에 비즈니스 로직 위임
-//        ProjectResponseDto response = projectService.saveProject(createDto, userPrincipal.getId());
+        ProjectResponseDto response = projectService.saveProject(createDto, userPrincipal.getId());
 
         // 성공 시 201 Created 응답과 생성된 데이터 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(null);
