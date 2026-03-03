@@ -23,7 +23,7 @@ public class ProjectController {
     // 1. [GET] 전체 목록 조회
     @GetMapping("/getUserProjects")
     public ResponseEntity<List<ProjectResponseDto>> getUserProjects(@AuthenticationPrincipal UserPrincipal userPrincipal) {
-        String userId = String.valueOf(userPrincipal.getId()); // 인사장님 ID 추출
+        String userId = String.valueOf(userPrincipal.getId());
         List<ProjectResponseDto> list = projectService.getUserProjects(userId);
         return ResponseEntity.ok(list);
     }
