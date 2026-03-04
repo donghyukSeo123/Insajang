@@ -20,7 +20,7 @@ public class ContentService {
     public Map<String, String> processAndSaveContent(ContentCreateRequest request, String userId) {
 
         // 1. 파이썬 서버(AI)에 데이터 전송 및 결과 수신
-        String pythonUrl = "http://localhost:8000/generate"; // 파이썬 서버 주소
+        String pythonUrl = "http://localhost:8000/generate-content"; // 파이썬 서버 주소
 
         // 파이썬이 받을 형식에 맞춰 데이터 조립
         Map<String, Object> pythonRequest = new HashMap<>();
