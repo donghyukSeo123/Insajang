@@ -32,7 +32,7 @@ public class ContentController {
 
         // 2. 서비스 호출 (파이썬 AI 요청 + DB 저장 일괄 처리)
         // 리액트가 사용하는 키값인 "generated_text"를 포함한 Map을 반환합니다.
-        Map<String, String> result = contentService.processAndSaveContent(request, userId);
+        Map<String, String> result = contentService.processAndSaveContentlog(request, userId);
 
         return ResponseEntity.ok(result);
     }
