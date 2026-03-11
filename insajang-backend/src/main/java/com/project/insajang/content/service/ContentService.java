@@ -1,10 +1,15 @@
 package com.project.insajang.content.service;
 
 import com.project.insajang.content.dto.ContentCreateRequest;
+import com.project.insajang.content.dto.ContentResponse;
+import com.project.insajang.content.dto.ContentSaveRequest;
+import com.project.insajang.content.entity.Content;
 import com.project.insajang.content.entity.ContentLog;
 import com.project.insajang.content.repository.ContentLogRepository;
+import com.project.insajang.content.repository.ContentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
@@ -15,6 +20,7 @@ import java.util.Map;
 public class ContentService {
 
     private final ContentLogRepository contentLogRepository;
+    private final ContentRepository contentRepository;
     private final RestTemplate restTemplate = new RestTemplate(); // 파이썬 통신용 도구
 
     public Map<String, String> processAndSaveContentlog(ContentCreateRequest request, String userId) {
@@ -52,5 +58,26 @@ public class ContentService {
         result.put("content_type", request.getContent_type());
 
         return result;
+    }
+
+    @Transactional
+    public ContentResponse finalizeAndSaveContent(ContentSaveRequest request, String userId) {
+
+        // 1. 엔티티 생성 (빌더 패턴 사용)
+        Content content = Content.builder()
+                .projectId(request.getProjectId())
+                // DTO가 String이면 Long으로 변환, null 체크도 해주면 더 좋음
+                .logId(request.getLogId() != null ? Long.valueOf(request.getLogId()) : null)
+                .title(request.getTitle())
+                .body(request.getBody())
+                .contentType(request.getContentType()) // 오타 수정 반영!
+                .status("PUBLISHED")
+                .build();
+
+        // 2. DB 저장
+        Content savedContent = contentRepository.save(content);
+
+        // 3. 빌더로 만든 Response DTO 반환
+        return ContentResponse.fromEntity(savedContent);
     }
 }

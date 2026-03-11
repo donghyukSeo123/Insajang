@@ -1,9 +1,7 @@
 package com.project.insajang.content.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -13,6 +11,8 @@ import java.time.LocalDateTime;
 @Table(name = "contents", schema = "public")
 @Getter @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Content {
 
     @Id
@@ -40,9 +40,6 @@ public class Content {
     @Column(length = 50)
     private String status = "DRAFT"; // 기본값 DRAFT
 
-    @Column(name = "type")
-    private String type; // 컨텐츠 상세 분류
-
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
 
@@ -53,4 +50,7 @@ public class Content {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "log_id")
+    private Long logId; // 생성의 근거가 된 로그 ID
 }

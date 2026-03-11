@@ -2,6 +2,8 @@ package com.project.insajang.content.controller;
 
 
 import com.project.insajang.content.dto.ContentCreateRequest;
+import com.project.insajang.content.dto.ContentResponse;
+import com.project.insajang.content.dto.ContentSaveRequest;
 import com.project.insajang.content.service.ContentService;
 import com.project.insajang.user.entity.UserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,20 @@ public class ContentController {
         // 2. 서비스 호출 (파이썬 AI 요청 + DB 저장 일괄 처리)
         // 리액트가 사용하는 키값인 "generated_text"를 포함한 Map을 반환합니다.
         Map<String, String> result = contentService.processAndSaveContentlog(request, userId);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/saveGeneratedContent")
+    public ResponseEntity<?> saveGeneratedContent(
+            @RequestBody ContentSaveRequest request, // 최종 저장용 DTO (id, title, text 포함)
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        String userId = String.valueOf(userPrincipal.getId());
+
+        // 1. 서비스 레이어 호출 (로그 ID를 참조하여 최종 컨텐츠 저장)
+        // request 안에는 사용자가 최종 수정한 title과 text가 들어있어야 합니다.
+        ContentResponse result = contentService.finalizeAndSaveContent(request, userId);
 
         return ResponseEntity.ok(result);
     }
