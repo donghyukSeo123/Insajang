@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -29,7 +30,7 @@ public class ContentController {
     public ResponseEntity<?> createContent(
             @RequestBody ContentCreateRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal // 🛡️ 시큐리티가 채워준 유저 정보
-    ) {
+    ) throws IOException {
         String userId = String.valueOf(userPrincipal.getId());
 
         // 2. 서비스 호출 (파이썬 AI 요청 + DB 저장 일괄 처리)

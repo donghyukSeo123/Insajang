@@ -7,14 +7,23 @@ import com.project.insajang.content.entity.Content;
 import com.project.insajang.content.entity.ContentLog;
 import com.project.insajang.content.repository.ContentLogRepository;
 import com.project.insajang.content.repository.ContentRepository;
+import com.project.insajang.file.entity.FileEntity;
+import com.project.insajang.file.repository.FileRepository;
+import com.project.insajang.file.service.FileService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContentService {
@@ -22,8 +31,10 @@ public class ContentService {
     private final ContentLogRepository contentLogRepository;
     private final ContentRepository contentRepository;
     private final RestTemplate restTemplate = new RestTemplate(); // 파이썬 통신용 도구
+    private final FileService fileService;
+    private final FileRepository fileRepository;
 
-    public Map<String, String> processAndSaveContentlog(ContentCreateRequest request, String userId) {
+    public Map<String, String> processAndSaveContentlog(ContentCreateRequest request, String userId) throws IOException {
 
         // 1. 파이썬 서버(AI)에 데이터 전송 및 결과 수신
         String pythonUrl = "http://localhost:8000/generate-content";
@@ -37,8 +48,9 @@ public class ContentService {
         Map<String, Object> pythonResponse = restTemplate.postForObject(pythonUrl, pythonRequest, Map.class);
         String generatedResult = String.valueOf(pythonResponse.get("generated_text"));
         String generatedTitle = String.valueOf(pythonResponse.get("generated_title"));
-        // 2. [변경 포인트] 본 테이블이 아닌 '로그 테이블'에 먼저 저장합니다.
-        // 사용자가 '최종 저장'을 누르기 전까지 본 테이블(Content)은 깨끗하게 유지됩니다.
+        String base64Data = String.valueOf(pythonResponse.get("img_data"));
+        String extension = String.valueOf(pythonResponse.get("extension"));
+
         ContentLog log = ContentLog.builder()
                 .projectId(request.getProject_id())
                 .title(request.getTitle())
@@ -50,11 +62,32 @@ public class ContentService {
 
         ContentLog savedLog = contentLogRepository.save(log);
 
+        //파일저장
+        FileEntity savedFile = fileService.saveAiImage(savedLog,base64Data,extension);
+
+        String fullImageUrl = fileService.getFullImageUrl(savedFile);
+
+        // 2. 이미지 태그 생성
+        String imgTag = String.format(
+                "<div style='text-align:center; margin: 20px 0;'>" +
+                        "  <img src='%s' style='max-width:100%%; border-radius:15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);' />" +
+                        "  <p style='color:#888; font-size:0.9em;'>[AI가 생성한 이미지입니다]</p>" +
+                        "</div>",
+                fullImageUrl
+        );
+
+        // 3. [IMAGE_HERE] 치환자로 이미지 박아넣기!
+        // 파이썬이 준 HTML 본문에서 글자만 슥 바꿔주면 끝납니다.
+        String finalHtml = generatedResult.replace("[IMAGE_HERE]", imgTag);
+
+        //저장된 파일과 html 합치기
+
+
         // 3. 리액트에게는 AI가 만든 텍스트만 돌려줍니다.
         Map<String, String> result = new HashMap<>();
-        result.put("generated_text", generatedResult);
+        result.put("generated_text", finalHtml);
         result.put("generated_title", generatedTitle); // 🚀 리액트 'Final Post Title' 칸에 꽂아줄 제목
-        result.put("log_id", String.valueOf(savedLog.getLogId())); // ID 추가!
+        result.put("log_id", String.valueOf(savedLog.getLogId()));
         result.put("content_type", request.getContent_type());
 
         return result;
@@ -63,21 +96,38 @@ public class ContentService {
     @Transactional
     public ContentResponse finalizeAndSaveContent(ContentSaveRequest request, String userId) {
 
-        // 1. 엔티티 생성 (빌더 패턴 사용)
+        // 1. 원본 로그(ContentLog) 조회
+        // (JPA 영속성 컨텍스트가 이 객체를 관리하기 시작함)
+        Long logId = (request.getLogId() != null) ? Long.valueOf(request.getLogId()) : null;
+        ContentLog contentLog = contentLogRepository.findById(logId)
+                .orElseThrow(() -> new EntityNotFoundException("원본 로그를 찾을 수 없습니다."));
+
+        // 2. 최종 컨텐츠 엔티티 생성 및 저장
         Content content = Content.builder()
                 .projectId(request.getProjectId())
-                // DTO가 String이면 Long으로 변환, null 체크도 해주면 더 좋음
-                .logId(request.getLogId() != null ? Long.valueOf(request.getLogId()) : null)
+                .logId(contentLog.getLogId())
                 .title(request.getTitle())
                 .body(request.getBody())
-                .contentType(request.getContentType()) // 오타 수정 반영!
+                .contentType(request.getContentType())
                 .status("PUBLISHED")
                 .build();
 
-        // 2. DB 저장
         Content savedContent = contentRepository.save(content);
 
-        // 3. 빌더로 만든 Response DTO 반환
+        // 3. [더티 체킹 포인트] 파일 상태 변경
+        // 레포지토리에서 가져온 FileEntity들은 모두 '영속 상태'입니다.
+        List<FileEntity> files = fileRepository.findByContentLog(contentLog);
+
+        if (files != null && !files.isEmpty()) {
+            for (FileEntity file : files) {
+                // 사장님이 만드신 메서드 호출!
+                // 내부에서 필드 값이 바뀌는 순간, JPA가 "어? 이거 나중에 수정해야겠네" 하고 메모해둡니다.
+                file.confirmContent(savedContent);
+            }
+        }
+
+        // 4. 리턴문 실행 후 메서드가 종료되면서 @Transactional에 의해 커밋(Commit) 발생!
+        // 이때 JPA가 바뀐 파일들을 찾아내서 자동으로 UPDATE 쿼리를 날립니다.
         return ContentResponse.fromEntity(savedContent);
     }
 }

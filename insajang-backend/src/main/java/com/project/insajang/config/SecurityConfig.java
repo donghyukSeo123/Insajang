@@ -37,7 +37,7 @@ public class SecurityConfig {
 
                 // API 경로 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/user/**").permitAll() // 로그인, 회원가입은 모두 허용
+                        .requestMatchers("/api/user/**","/uploads/**").permitAll() // 로그인, 회원가입은 모두 허용
                         .anyRequest().authenticated()               // 나머지는 토큰이 있어야만 허용
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
