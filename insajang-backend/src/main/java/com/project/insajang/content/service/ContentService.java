@@ -1,8 +1,6 @@
 package com.project.insajang.content.service;
 
-import com.project.insajang.content.dto.ContentCreateRequest;
-import com.project.insajang.content.dto.ContentResponse;
-import com.project.insajang.content.dto.ContentSaveRequest;
+import com.project.insajang.content.dto.*;
 import com.project.insajang.content.entity.Content;
 import com.project.insajang.content.entity.ContentLog;
 import com.project.insajang.content.repository.ContentLogRepository;
@@ -10,6 +8,8 @@ import com.project.insajang.content.repository.ContentRepository;
 import com.project.insajang.file.entity.FileEntity;
 import com.project.insajang.file.repository.FileRepository;
 import com.project.insajang.file.service.FileService;
+import com.project.insajang.project.entity.Project;
+import com.project.insajang.project.repository.ProjectRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -30,6 +31,7 @@ public class ContentService {
 
     private final ContentLogRepository contentLogRepository;
     private final ContentRepository contentRepository;
+    private final ProjectRepository projectRepository;
     private final RestTemplate restTemplate = new RestTemplate(); // 파이썬 통신용 도구
     private final FileService fileService;
     private final FileRepository fileRepository;
@@ -129,5 +131,33 @@ public class ContentService {
         // 4. 리턴문 실행 후 메서드가 종료되면서 @Transactional에 의해 커밋(Commit) 발생!
         // 이때 JPA가 바뀐 파일들을 찾아내서 자동으로 UPDATE 쿼리를 날립니다.
         return ContentResponse.fromEntity(savedContent);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectTreeDTO> makeTreeStructure(String userId) {
+        // 1. 해당 유저가 소유한 모든 프로젝트(Master) 목록 조회
+        List<Project> projects = projectRepository.findByUserId(Long.valueOf(userId));
+
+        // 2. 프로젝트 리스트를 순회하며 Tree 구조 DTO로 변환
+        return projects.stream().map(project -> {
+
+            // 3. 해당 프로젝트에 속한 모든 컨텐츠(Detail) 목록 조회 및 DTO 변환
+            List<ContentTreeDTO> contentTreeDTOList = contentRepository.findByProjectId(project.getProjectId())
+                    .stream()
+                    .map(content -> ContentTreeDTO.builder()
+                            .contentId(content.getContentId())
+                            .title(content.getTitle())
+                            .detail(ContentResponse.fromEntity(content))
+                            .build())
+                    .collect(Collectors.toList());
+
+            // 4. 프로젝트 정보와 컨텐츠 리스트를 결합하여 반환
+            return ProjectTreeDTO.builder()
+                    .projectId(project.getProjectId())
+                    .name(project.getName())
+                    .children(contentTreeDTOList) // 여기서 Detail 배열이 합쳐짐
+                    .build();
+
+        }).collect(Collectors.toList());
     }
 }

@@ -4,18 +4,17 @@ package com.project.insajang.content.controller;
 import com.project.insajang.content.dto.ContentCreateRequest;
 import com.project.insajang.content.dto.ContentResponse;
 import com.project.insajang.content.dto.ContentSaveRequest;
+import com.project.insajang.content.dto.ProjectTreeDTO;
 import com.project.insajang.content.service.ContentService;
 import com.project.insajang.user.entity.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -53,4 +52,19 @@ public class ContentController {
 
         return ResponseEntity.ok(result);
     }
+
+
+    @GetMapping("/selectContentsTree")
+    public ResponseEntity<List<ProjectTreeDTO>> getContentTree(
+            @AuthenticationPrincipal UserPrincipal userPrincipal // 🛡️ 본인 데이터만 조회
+    ) {
+        String userId = String.valueOf(userPrincipal.getId());
+
+        // 서비스에서 해당 유저의 프로젝트별/타입별 계층 구조를 조립
+        List<ProjectTreeDTO> treeList = contentService.makeTreeStructure(userId);
+
+        return ResponseEntity.ok(treeList);
+    }
+
+
 }
