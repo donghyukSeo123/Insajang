@@ -66,5 +66,23 @@ public class ContentController {
         return ResponseEntity.ok(treeList);
     }
 
+    @GetMapping("/detail/{contentId}")
+    public ResponseEntity<ContentResponse> getContentDetail(
+            @PathVariable Long contentId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal // 보안을 위해 본인 소유인지 체크 권장
+    ) {
+        String userId = String.valueOf(userPrincipal.getId());
+
+        // 1. 서비스에서 해당 유저의 특정 콘텐츠 상세 정보 조회
+        // (보안상 userId와 contentId를 같이 넘겨 본인 것만 조회하게 하는 것이 좋습니다)
+        ContentResponse detail = contentService.getContentDetail(userId, contentId);
+
+        if (detail != null) {
+            return ResponseEntity.ok(detail);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
 
 }

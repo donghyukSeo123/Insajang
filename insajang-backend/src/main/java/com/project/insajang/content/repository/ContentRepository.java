@@ -15,4 +15,5 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     // 엔티티 내에 프로젝트 필드명이 'project'라고 가정할 때:
     List<Content> findByProjectId(Long projectId);
 
+    Content findByContentId(Long contentId);
 }

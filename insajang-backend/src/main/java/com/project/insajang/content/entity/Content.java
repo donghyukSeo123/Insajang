@@ -53,4 +53,5 @@ public class Content {
 
     @Column(name = "log_id")
     private Long logId; // 생성의 근거가 된 로그 ID
+
 }

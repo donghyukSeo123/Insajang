@@ -147,7 +147,6 @@ public class ContentService {
                     .map(content -> ContentTreeDTO.builder()
                             .contentId(content.getContentId())
                             .title(content.getTitle())
-                            .detail(ContentResponse.fromEntity(content))
                             .build())
                     .collect(Collectors.toList());
 
@@ -159,5 +158,28 @@ public class ContentService {
                     .build();
 
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 콘텐츠 상세 정보 조회
+     * @param userId 현재 로그인한 사용자 ID (보안 체크용)
+     * @param contentId 조회할 콘텐츠 PK
+     * @return ContentResponse (제목, HTML 본문 등)
+     */
+    public ContentResponse getContentDetail(String userId, Long contentId) {
+        // 1. DB에서 데이터 조회 (Repository에서 Optional<Content>를 반환한다고 가정)
+        Content content = contentRepository.findByContentId(contentId);
+
+        // 2. 결과 검증 (보안 체크: 콘텐츠 소유자 확인 로직이 필요하다면 여기서 수행)
+        // 현재 엔티티에 userId가 없다면 projectId 등을 통해 검증 로직을 추가할 수 있습니다.
+
+        // 3. Response DTO로 변환하여 반환 (Builder 패턴 사용)
+        return ContentResponse.builder()
+                .projectId(content.getProjectId())
+                .contentId(content.getContentId())
+                .createdAt(content.getCreatedAt())
+                .title(content.getTitle())
+                .body(content.getBody())      // 엔티티의 body(HTML)를 DTO의 content에 매핑
+                .build();
     }
 }
