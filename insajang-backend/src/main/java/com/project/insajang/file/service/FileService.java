@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -67,4 +68,35 @@ public class FileService {
     public String getFullImageUrl(FileEntity fileEntity) {
         return backendUrl + fileEntity.getFilePath() + fileEntity.getSavedName();
     }
+
+    @Transactional
+    public void deleteFilesByContentId(Long contentId) {
+        // 1. 해당 콘텐츠에 속한 파일 리스트 조회
+        List<FileEntity> files = fileRepository.findByContentContentId(contentId);
+
+        for (FileEntity file : files) {
+            try {
+                // 2. 물리적 경로 계산 (저장된 uploadDir + UUID 파일명)
+                // 주의: DB의 filePath가 "/upload/" 형태라면 실제 OS 경로와 맞춰야 합니다.
+                Path filePath = Paths.get(uploadDir).resolve(file.getSavedName());
+
+                // 3. 실제 물리 파일 삭제
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                    log.info("물리 파일 삭제 성공: {}", filePath.toAbsolutePath());
+                } else {
+                    log.warn("삭제할 물리 파일이 존재하지 않습니다: {}", filePath.toAbsolutePath());
+                }
+
+                // 4. DB 레코드 삭제 (물리 삭제)
+                fileRepository.delete(file);
+
+            } catch (IOException e) {
+                log.error("파일 삭제 중 오류 발생: {}", file.getSavedName(), e);
+                // 필요에 따라 예외를 던지거나, 로그만 남기고 다음 파일로 진행
+            }
+        }
+    }
+
+
 }

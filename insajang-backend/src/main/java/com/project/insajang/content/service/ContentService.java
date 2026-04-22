@@ -182,4 +182,29 @@ public class ContentService {
                 .body(content.getBody())      // 엔티티의 body(HTML)를 DTO의 content에 매핑
                 .build();
     }
+
+
+    /**
+     * 콘텐츠 삭제
+     * @param userId 현재 로그인한 사용자 ID (소유권 검증용)
+     * @param contentId 삭제할 콘텐츠 PK
+     */
+    @Transactional
+    public void deleteContent(String userId, Long contentId) {
+        // 1. 콘텐츠 존재 여부 및 소유권 확인
+        Content content = contentRepository.findByContentId(contentId);
+
+        // 2. [물리 삭제 전] 관련 로깅 처리 (포트폴리오 어필용 Audit Log)
+        // 별도의 로그 테이블이 있다면 여기서 save 처리
+        log.info("Content Hard Delete Request - User: {}, ContentID: {}, Title: {}",
+                userId, contentId, content.getTitle());
+
+        // 3. 실제 파일 삭제 (비용 절감 핵심: S3나 로컬 저장소 파일 제거)
+        fileService.deleteFilesByContentId(contentId);
+
+
+        // 4. DB 물리 삭제 (Hard Delete)
+        // 관계 매핑 시 CascadeType.REMOVE가 걸려 있다면 연관된 태그/댓글도 함께 삭제됨
+        contentRepository.delete(content);
+    }
 }

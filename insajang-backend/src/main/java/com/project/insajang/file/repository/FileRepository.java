@@ -10,4 +10,7 @@ import java.util.List;
 @Repository
 public interface FileRepository extends JpaRepository<FileEntity, Long> {
     List<FileEntity> findByContentLog(ContentLog contentLog);
+
+    List<FileEntity> findByContentContentId(Long contentId);
+
 }

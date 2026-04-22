@@ -84,5 +84,18 @@ public class ContentController {
         }
     }
 
+    @DeleteMapping("/{contentId}") // 1. 주소창의 {projectId}를 변수로 쓰겠다는 선언
+    public ResponseEntity<Void> deleteProject(
+            @AuthenticationPrincipal UserPrincipal userPrincipal, // 2. 로그인한 인사장님 정보
+            @PathVariable("contentId") Long contentId // 3. 주소에 딸려온 ID를 낚아챔
+    ) {
+        String userId = String.valueOf(userPrincipal.getId());
+
+        contentService.deleteContent(userId, contentId);
+
+        // 성공 시 204 No Content(내용 없음) 또는 200 OK 반환
+        return ResponseEntity.noContent().build();
+    }
+
 
 }
