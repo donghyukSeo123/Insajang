@@ -1,14 +1,13 @@
 package com.project.insajang.content.controller;
 
 
-import com.project.insajang.content.dto.ContentCreateRequest;
-import com.project.insajang.content.dto.ContentResponse;
-import com.project.insajang.content.dto.ContentSaveRequest;
-import com.project.insajang.content.dto.ProjectTreeDTO;
+import com.project.insajang.content.dto.*;
 import com.project.insajang.content.service.ContentService;
 import com.project.insajang.user.entity.UserPrincipal;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -95,6 +94,37 @@ public class ContentController {
 
         // 성공 시 204 No Content(내용 없음) 또는 200 OK 반환
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 컨텐츠 수정 (PATCH: 부분 수정)
+     */
+    @PatchMapping("/update/{contentId}")
+    public ResponseEntity<?> updateContent(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable Long contentId,
+            @RequestBody ContentUpdateDto updateDto) {
+
+        try {
+            // 1. Service를 통해 비즈니스 로직 및 DB 업데이트 수행
+            ContentResponse content = contentService.update(contentId, updateDto);
+
+            // 2. 성공 응답 반환
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "성공적으로 수정되었습니다.",
+                    "data", content
+            ));
+
+        } catch (EntityNotFoundException e) {
+            // 해당 ID가 없을 경우 404 에러
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "컨텐츠를 찾을 수 없습니다."));
+        } catch (Exception e) {
+            // 기타 서버 에러 500
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "서버 오류가 발생했습니다."));
+        }
     }
 
 

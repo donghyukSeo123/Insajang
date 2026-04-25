@@ -207,4 +207,26 @@ public class ContentService {
         // 관계 매핑 시 CascadeType.REMOVE가 걸려 있다면 연관된 태그/댓글도 함께 삭제됨
         contentRepository.delete(content);
     }
+
+
+    @Transactional // 중요: 이 어노테이션이 있어야 Dirty Checking이 작동합니다.
+    public ContentResponse update(Long contentId, ContentUpdateDto updateDto) {
+
+        // 1. 기존 데이터 조회 (없으면 예외 발생)
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 컨텐츠를 찾을 수 없습니다. ID: " + contentId));
+
+        // 2. DTO에 값이 들어있는 경우에만 필드 업데이트 (Null-Safe)
+        // 프론트엔드에서 변경된 데이터만 보냈을 때 기존 데이터가 날아가지 않도록 보호합니다.
+        if (updateDto.getTitle() != null) {
+            content.setTitle(updateDto.getTitle());
+        }
+        if (updateDto.getBody() != null) {
+            content.setBody(updateDto.getBody());
+        }
+
+        // 3. 수정된 결과를 Response DTO로 변환하여 반환
+        // 별도의 save 호출 없이 트랜잭션 종료 시점에 DB 업데이트 쿼리가 실행됩니다.
+        return ContentResponse.fromEntity(content);
+    }
 }
