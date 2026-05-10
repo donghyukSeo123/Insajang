@@ -3,6 +3,7 @@ package com.project.insajang.content.service;
 import com.project.insajang.content.dto.*;
 import com.project.insajang.content.entity.Content;
 import com.project.insajang.content.entity.ContentLog;
+import com.project.insajang.content.entity.ContentStatus;
 import com.project.insajang.content.repository.ContentLogRepository;
 import com.project.insajang.content.repository.ContentRepository;
 import com.project.insajang.file.entity.FileEntity;
@@ -111,7 +112,7 @@ public class ContentService {
                 .title(request.getTitle())
                 .body(request.getBody())
                 .contentType(request.getContentType())
-                .status("PUBLISHED")
+                .status("READY")
                 .build();
 
         Content savedContent = contentRepository.save(content);
@@ -227,6 +228,23 @@ public class ContentService {
 
         // 3. 수정된 결과를 Response DTO로 변환하여 반환
         // 별도의 save 호출 없이 트랜잭션 종료 시점에 DB 업데이트 쿼리가 실행됩니다.
+        return ContentResponse.fromEntity(content);
+    }
+
+    @Transactional
+    public ContentResponse saveSchedule(ContentSaveRequest dto) {
+        // 1. 컨텐츠 조회 (id가 2인 데이터를 찾음)
+        Content content = contentRepository.findById(Long.valueOf(dto.getContentId()))
+                .orElseThrow(() -> new EntityNotFoundException("해당 컨텐츠를 찾을 수 없습니다. ID: " + dto.getContentId()));
+
+        // 2. 예약 시간 설정 및 상태 변경
+        // 팁: 이미 지난 시간에 예약하려고 하는 경우에 대한 방어 로직을 넣으면 더 안전합니다.
+        if (dto.getScheduledAt() != null) {
+            content.setScheduledAt(dto.getScheduledAt());
+            content.setStatus(String.valueOf(ContentStatus.SCHEDULED)); // 예약중 상태로 변경
+        }
+
+        // 3. 변경 감지(Dirty Checking)에 의해 별도의 save 호출 없이도 트랜잭션 종료 시 DB 반영
         return ContentResponse.fromEntity(content);
     }
 }

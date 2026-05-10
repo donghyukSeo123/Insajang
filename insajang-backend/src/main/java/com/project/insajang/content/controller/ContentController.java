@@ -127,5 +127,23 @@ public class ContentController {
         }
     }
 
+    /**
+     * 컨텐츠 예약 저장 및 상태 변경
+     * @param dto 예약 시간(scheduledAt)과 컨텐츠 정보 포함
+     */
+    @PostMapping("/save-schedule") // 케밥 케이스(kebab-case) 관례 적용 추천
+    public ResponseEntity<ContentResponse> saveSchedule(
+            @RequestBody ContentSaveRequest request, // 최종 저장용 DTO (id, title, text 포함)
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info(request.getContentId());
+        log.info(String.valueOf(request.getScheduledAt()));
+
+        ContentResponse response = contentService.saveSchedule(request);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+
+
 
 }

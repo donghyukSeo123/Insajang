@@ -170,6 +170,19 @@ public class UserService {
         return null; // 틀리면 null
     }
 
+    /**
+     * 닉네임 중복 여부 확인
+     * @param nickname 검사할 닉네임
+     * @return 중복이면 true, 사용 가능하면 false
+     */
+    public boolean isNicknameDuplicate(String nickname) {
+        // 닉네임이 비어있거나 공백인 경우 예외처리 또는 true 반환 가능
+        if (nickname == null || nickname.trim().isEmpty()) {
+            return true;
+        }
+        return userRepository.existsByNickname(nickname);
+    }
+
     @Getter
     @AllArgsConstructor
     public static class VerificationData {
