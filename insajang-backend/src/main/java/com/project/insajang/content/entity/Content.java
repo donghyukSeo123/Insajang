@@ -1,11 +1,14 @@
 package com.project.insajang.content.entity;
 
+import com.project.insajang.file.entity.FileEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "contents", schema = "public")
@@ -19,6 +22,9 @@ public class Content {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "content_id")
     private Long contentId;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     // 프로젝트와 연결 (기존 projects 테이블의 project_id 참조)
     @Column(name = "project_id", nullable = false)
@@ -53,5 +59,8 @@ public class Content {
 
     @Column(name = "log_id")
     private Long logId; // 생성의 근거가 된 로그 ID
+
+    @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FileEntity> files = new ArrayList<>();
 
 }

@@ -6,6 +6,7 @@ import com.project.insajang.content.entity.Content;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -16,4 +17,6 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     List<Content> findByProjectId(Long projectId);
 
     Content findByContentId(Long contentId);
+
+    List<Content> findByScheduledAtBetweenAndUserId(LocalDateTime startDate, LocalDateTime endDate, Long userId);
 }

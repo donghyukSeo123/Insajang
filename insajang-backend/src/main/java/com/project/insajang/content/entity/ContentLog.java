@@ -19,6 +19,9 @@ public class ContentLog {
     @Column(name = "log_id")
     private Long logId;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Column(name = "project_id", nullable = false)
     private Long projectId;
 
@@ -42,12 +45,13 @@ public class ContentLog {
     private LocalDateTime createdAt;
 
     @Builder // 생성 시 편리함을 위해 빌더 패턴 추가
-    public ContentLog(Long projectId, String title, String userInput, String generatedBody, String contentType, String type) {
+    public ContentLog(Long projectId, String title, String userInput, String generatedBody, String contentType, String type, Long userId) {
         this.projectId = projectId;
         this.title = title;
         this.userInput = userInput;
         this.generatedBody = generatedBody;
         this.contentType = contentType;
         this.type = type;
+        this.userId = userId;
     }
 }

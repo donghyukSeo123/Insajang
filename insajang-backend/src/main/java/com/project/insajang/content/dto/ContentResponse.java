@@ -21,6 +21,7 @@ public class ContentResponse {
     private String contentType;  // BLOG, INSTA 등
     private String status;       // DRAFT, PUBLISHED 등
     private LocalDateTime createdAt; // 생성 시간
+    private LocalDateTime scheduledAt;
 
     // 💡 정적 팩토리 메서드 (엔티티를 DTO로 편하게 변환)
     public static ContentResponse fromEntity(Content content) {
@@ -32,6 +33,7 @@ public class ContentResponse {
                 .contentType(content.getContentType())
                 .status(content.getStatus())
                 .createdAt(content.getCreatedAt())
+                .scheduledAt(content.getScheduledAt())
                 .build();
     }
 }

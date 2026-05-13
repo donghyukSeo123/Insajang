@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,7 @@ public class ContentService {
                 .generatedBody(generatedResult) // AI가 준 날것의 데이터
                 .contentType(request.getContent_type())
                 .type(request.getContent_type())
+                .userId(Long.valueOf(userId))
                 .build();
 
         ContentLog savedLog = contentLogRepository.save(log);
@@ -113,6 +116,7 @@ public class ContentService {
                 .body(request.getBody())
                 .contentType(request.getContentType())
                 .status("READY")
+                .userId(Long.valueOf(userId))
                 .build();
 
         Content savedContent = contentRepository.save(content);
@@ -246,5 +250,34 @@ public class ContentService {
 
         // 3. 변경 감지(Dirty Checking)에 의해 별도의 save 호출 없이도 트랜잭션 종료 시 DB 반영
         return ContentResponse.fromEntity(content);
+    }
+
+    /**
+     * 특정 기간 내의 일정 목록 조회
+     * @param start 조회 시작일 (ISO8601 문자열)
+     * @param end   조회 종료일 (ISO8601 문자열)
+     * @param userId 사용자 ID
+     */
+    @Transactional(readOnly = true)
+    public List<ContentResponse> getSchedulesByRange(String start, String end, String userId) {
+        // 1. 날짜 파싱 (FullCalendar의 ISO8601 형식을 LocalDateTime으로 변환)
+        // OffsetDateTime은 +09:00 같은 타임존 정보를 안전하게 처리합니다.
+        LocalDateTime startDate = OffsetDateTime.parse(start).toLocalDateTime();
+        LocalDateTime endDate = OffsetDateTime.parse(end).toLocalDateTime();
+
+        log.info("일정 범위 조회: {} ~ {} (User: {})", startDate, endDate, userId);
+
+        // 2. Repository 호출
+        // 작성하신 saveSchedule 스타일처럼 contentRepository를 사용한다고 가정합니다.
+        List<Content> contents = contentRepository.findByScheduledAtBetweenAndUserId(
+                startDate,
+                endDate,
+                Long.valueOf(userId)
+        );
+
+        // 3. Entity 리스트를 Response DTO 리스트로 변환 (ContentResponse::fromEntity 활용)
+        return contents.stream()
+                .map(ContentResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }

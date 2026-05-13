@@ -129,7 +129,8 @@ public class ContentController {
 
     /**
      * 컨텐츠 예약 저장 및 상태 변경
-     * @param dto 예약 시간(scheduledAt)과 컨텐츠 정보 포함
+     * @param request
+     * 예약 시간(scheduledAt)과 컨텐츠 정보 포함
      */
     @PostMapping("/save-schedule") // 케밥 케이스(kebab-case) 관례 적용 추천
     public ResponseEntity<ContentResponse> saveSchedule(
@@ -143,7 +144,24 @@ public class ContentController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    /**
+     * 1. 캘린더 화면 범위에 따른 일정 목록 조회
+     * @param start 조회 시작일 (FullCalendar에서 전달)
+     * @param end   조회 종료일 (FullCalendar에서 전달)
+     */
+    @GetMapping("/schedules")
+    public ResponseEntity<List<ContentResponse>> getSchedules(
+            @RequestParam("start") String start,
+            @RequestParam("end") String end,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
+        log.info("일정 조회 요청: {} ~ {}", start, end);
+        String userId = String.valueOf(userPrincipal.getId());
+        // 서비스에서 기간 내의 일정을 조회 (필요 시 userPrincipal을 통해 본인 데이터만 필터링)
+        List<ContentResponse> schedules = contentService.getSchedulesByRange(start, end, userId);
+
+        return ResponseEntity.ok(schedules);
+    }
 
 
 }
