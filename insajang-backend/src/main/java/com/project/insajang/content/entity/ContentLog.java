@@ -19,10 +19,10 @@ public class ContentLog {
     @Column(name = "log_id")
     private Long logId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id")
     private Long projectId;
 
     private String title;

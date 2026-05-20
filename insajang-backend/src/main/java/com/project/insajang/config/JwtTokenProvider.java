@@ -100,12 +100,16 @@ public class JwtTokenProvider {
     }
 
 
-    // 토큰 유효성 검사 메서드 (필터에서 쓰임)
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
             return true;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // 💡 토큰 유효기간이 만료되면 로그를 남기고 false 리턴
+            System.out.println(" 만료된 JWT 토큰입니다. (1시간 초과)");
+            return false;
         } catch (Exception e) {
+            // 그 외 위조되거나 잘못된 토큰 처리
             return false;
         }
     }

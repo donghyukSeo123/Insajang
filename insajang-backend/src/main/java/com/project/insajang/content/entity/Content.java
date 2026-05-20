@@ -27,7 +27,7 @@ public class Content {
     private Long userId;
 
     // 프로젝트와 연결 (기존 projects 테이블의 project_id 참조)
-    @Column(name = "project_id", nullable = false)
+    @Column(name = "project_id")
     private Long projectId;
 
     private String title;
@@ -62,5 +62,19 @@ public class Content {
 
     @OneToMany(mappedBy = "content", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FileEntity> files = new ArrayList<>();
+
+    // ================= 💡 [추가] 메일 링크 보안용 토큰 필드만 추가 =================
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @Column(name = "token_generated_at")
+    private LocalDateTime tokenGeneratedAt; // 💡 토큰 생성 시간 필드 추가
+
+    // 비즈니스 로직에 따른 상태 변경 편의 메서드
+    public void publishNotificationSent(String token) {
+        this.status = "PUBLISHED";       // 메일 발송(=유저 노출) 완료 시 완료 상태로 전이
+        this.verificationToken = token;  // 보안 토큰 저장
+        this.tokenGeneratedAt = LocalDateTime.now();
+    }
 
 }
