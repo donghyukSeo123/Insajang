@@ -73,12 +73,13 @@ public class ContentService {
 
         String fullImageUrl = fileService.getFullImageUrl(savedFile);
 
-        // 2. 이미지 태그 생성
         String imgTag = String.format(
-                "<div style='text-align:center; margin: 20px 0;'>" +
-                        "  <img src='%s' style='max-width:100%%; border-radius:15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);' />" +
-                        "  <p style='color:#888; font-size:0.9em;'>[AI가 생성한 이미지입니다]</p>" +
-                        "</div>",
+                "<p style='text-align: center; margin-top: 20px; margin-bottom: 5px;'>" +
+                        "  <img src='%s' style='max-width: 100%%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);' />" +
+                        "</p>" +
+                        "<p style='text-align: center; color: #888; font-size: 0.9em; margin-top: 0; margin-bottom: 20px;'>" +
+                        "  [AI가 생성한 이미지입니다]" +
+                        "</p>",
                 fullImageUrl
         );
 
@@ -152,6 +153,7 @@ public class ContentService {
                     .map(content -> ContentTreeDTO.builder()
                             .contentId(content.getContentId())
                             .title(content.getTitle())
+                            .status(content.getStatus())
                             .build())
                     .collect(Collectors.toList());
 

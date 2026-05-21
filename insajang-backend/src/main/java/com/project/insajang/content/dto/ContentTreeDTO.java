@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 public class ContentTreeDTO {
     private Long contentId;
     private String title;
-
+    private String status;
     private final String type = "file"; // 🚀 프론트에서 파일 아이콘 표시용
 }
