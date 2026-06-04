@@ -21,16 +21,34 @@ public class JwtTokenProvider {
 
     private final String secretString = "contents-maker-studio-secure-key-2026-auth";
     private final Key secretKey = Keys.hmacShaKeyFor(secretString.getBytes());
-    private final long validityInMilliseconds = 3600000;
+    private final long validityInMilliseconds = 3600000; // 1 hour
+    private final long refreshTokenValidityInMilliseconds = 7 * 24 * 60 * 60 * 1000L; // 7 days
 
-    // 토큰 생성 (userId 주머니에 넣기)
+    // Access Token 생성 (userId 주머니에 넣기)
     public String createToken(Long userId, String email, String role) {
         Claims claims = Jwts.claims().setSubject(email);
         claims.put("userId", userId);
-        claims.put("role",role );
+        claims.put("role", role);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // Refresh Token 생성
+    public String createRefreshToken(Long userId, String email) {
+        Claims claims = Jwts.claims().setSubject(email);
+        claims.put("userId", userId);
+        claims.put("isRefreshToken", true);
+
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + refreshTokenValidityInMilliseconds);
 
         return Jwts.builder()
                 .setClaims(claims)

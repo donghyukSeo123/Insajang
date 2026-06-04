@@ -1,8 +1,11 @@
 package com.project.insajang.user.service;
 
+import com.project.insajang.config.JwtTokenProvider;
 import com.project.insajang.email.service.EmailService;
 import com.project.insajang.user.dto.UserJoinRequest;
+import com.project.insajang.user.entity.RefreshToken;
 import com.project.insajang.user.entity.User;
+import com.project.insajang.user.repository.RefreshTokenRepository;
 import com.project.insajang.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,9 +17,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -27,8 +32,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    //인증번호와 생성시간을 함께 저장
-    private final Map<String, VerificationData> verificationStorage = new HashMap<>();
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    //인증번호와 생성시간을 함께 저장 (Thread-safe ConcurrentHashMap 적용)
+    private final Map<String, VerificationData> verificationStorage = new ConcurrentHashMap<>();
 
     // 유효 시간 설정 (3분 = 180,000 밀리초)
     private static final long EXPIRED_TIME = 3 * 60 * 1000L;
@@ -144,6 +152,62 @@ public class UserService {
             return true;
         }
         return userRepository.existsByNickname(nickname);
+    }
+
+    /**
+     * 리프레시 토큰 저장 및 갱신 (1인 1로그인/중복 기기 세션 차단 또는 덮어쓰기)
+     */
+    @Transactional
+    public void saveRefreshToken(Long userId, String token) {
+        refreshTokenRepository.deleteByUserId(userId); // 기존 토큰 파기(Revocation)
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .userId(userId)
+                .token(token)
+                .expiryDate(LocalDateTime.now().plusDays(7)) // 7일 유효
+                .build();
+
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    /**
+     * 리프레시 토큰 검증 및 재발급 (Refresh Token Rotation 적용)
+     */
+    @Transactional
+    public Map<String, String> reissueToken(String refreshTokenStr) {
+        // 1. DB에서 토큰 조회
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않거나 유효하지 않은 리프레시 토큰입니다."));
+
+        // 2. 만료 여부 확인
+        if (refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new IllegalArgumentException("만료된 리프레시 토큰입니다. 다시 로그인해 주세요.");
+        }
+
+        // 3. 서명 유효성 검증
+        if (!jwtTokenProvider.validateToken(refreshTokenStr)) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new IllegalArgumentException("유효하지 않은 리프레시 토큰 서명입니다.");
+        }
+
+        // 4. 유저 정보 조회 및 새로운 이중 토큰 생성
+        User user = userRepository.findById(refreshToken.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        String newAccessToken = jwtTokenProvider.createToken(user.getId(), user.getEmail(), user.getRole());
+        String newRefreshTokenStr = jwtTokenProvider.createRefreshToken(user.getId(), user.getEmail());
+
+        // 5. 토큰 로테이션 적용: 기존 토큰 레코드를 새 토큰으로 업데이트
+        refreshToken.setToken(newRefreshTokenStr);
+        refreshToken.setExpiryDate(LocalDateTime.now().plusDays(7));
+        refreshTokenRepository.save(refreshToken);
+
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", newAccessToken);
+        tokens.put("refreshToken", newRefreshTokenStr);
+
+        return tokens;
     }
 
     @Getter

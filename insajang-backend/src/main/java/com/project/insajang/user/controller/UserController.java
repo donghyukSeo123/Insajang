@@ -81,20 +81,44 @@ public class UserController {
     }
 
     @PostMapping("/login")
-        public ResponseEntity<?> checkNickname(@Valid @RequestBody LoginRequest request) {
-            // 서비스에서 existsByNickname(nickname) 호출
-            User user = userService.login(request.getEmail(),request.getPassword());
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        User user = userService.login(request.getEmail(), request.getPassword());
 
         if (user != null) {
-            String token = jwtTokenProvider.createToken(user.getId(),user.getEmail(),user.getRole());
+            String accessToken = jwtTokenProvider.createToken(user.getId(), user.getEmail(), user.getRole());
+            String refreshToken = jwtTokenProvider.createRefreshToken(user.getId(), user.getEmail());
+
+            // DB에 Refresh Token 저장/갱신
+            userService.saveRefreshToken(user.getId(), refreshToken);
 
             Map<String, String> response = new HashMap<>();
-            response.put("accessToken", token);
+            response.put("accessToken", accessToken);
+            response.put("refreshToken", refreshToken);
             response.put("userName", user.getName());
             return ResponseEntity.ok(response);
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("이메일 또는 비밀번호가 올바르지 않습니다.");
     }
+
+    /**
+     * 토큰 재발행 API (Silent Reissue)
+     */
+    @PostMapping("/reissue")
+    public ResponseEntity<?> reissue(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("리프레시 토큰이 누락되었습니다.");
+        }
+
+        try {
+            Map<String, String> tokens = userService.reissueToken(refreshToken);
+            return ResponseEntity.ok(tokens);
+        } catch (IllegalArgumentException e) {
+            log.warn("토큰 재발행 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
     @Getter
     @Setter
     public static class VerificationRequest {
