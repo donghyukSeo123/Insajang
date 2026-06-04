@@ -40,6 +40,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/user/**","/uploads/**").permitAll() // 로그인, 회원가입은 모두 허용
                         .anyRequest().authenticated()               // 나머지는 토큰이 있어야만 허용
                 )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            System.out.println("인증 실패: 만료되거나 변조된 토큰입니다.");
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"토큰이 만료되었습니다.\"}");
+                        })
+                )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);
 

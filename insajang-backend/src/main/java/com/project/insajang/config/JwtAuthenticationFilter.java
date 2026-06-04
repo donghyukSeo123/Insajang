@@ -27,29 +27,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         System.out.println("문지기가 받은 토큰: " + token);
 
-        // 1. 토큰이 존재할 때
-        if (token != null) {
-            // 토큰이 유효한 경우 ➡️ 정상 인증 처리
-            if (jwtTokenProvider.validateToken(token)) {
-                Authentication auth = jwtTokenProvider.getAuthentication(token);
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                System.out.println("인증 성공: " + auth.getName());
-                filterChain.doFilter(request, response); // 다음 단계로 진행
-            }
-            // 💡 2. 토큰이 있는데 만료되었거나 유효하지 않은 경우 ➡️ 즉시 401 응답 거부!
-            else {
-                System.out.println("인증 실패: 만료되거나 변조된 토큰입니다.");
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 세팅
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"토큰이 만료되었습니다.\"}");
-                return; // 🔥 중요: 여기서 return을 해서 다음 filterChain을 타지 못하게 막아야 합니다!
-            }
+        // 토큰이 존재하고 유효한 경우에만 인증 객체를 SecurityContext에 세팅
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            Authentication auth = jwtTokenProvider.getAuthentication(token);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            System.out.println("인증 성공: " + auth.getName());
         }
-        // 3. 토큰이 아예 없는 경우 (ex: 로그인, 회원가입 화면 등)
-        else {
-            System.out.println("토큰 없음: 공용 API 요청 또는 최초 접근");
-            filterChain.doFilter(request, response); // SecurityConfig의 permitAll 믿고 일단 통과
-        }
+
+        // 항상 필터 체인을 계속 진행시킵니다.
+        // 인증정보가 필요한 API는 SecurityConfig 설정에 따라 Spring Security가 자동으로 401/403으로 차단합니다.
+        filterChain.doFilter(request, response);
     }
 
     // 헤더에서 토큰만 쏙 빼오는 보조 메서드

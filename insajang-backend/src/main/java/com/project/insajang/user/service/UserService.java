@@ -185,10 +185,10 @@ public class UserService {
             throw new IllegalArgumentException("만료된 리프레시 토큰입니다. 다시 로그인해 주세요.");
         }
 
-        // 3. 서명 유효성 검증
+        // 3. 서명 유효성 및 만료 검증
         if (!jwtTokenProvider.validateToken(refreshTokenStr)) {
             refreshTokenRepository.delete(refreshToken);
-            throw new IllegalArgumentException("유효하지 않은 리프레시 토큰 서명입니다.");
+            throw new IllegalArgumentException("만료되었거나 서명이 유효하지 않은 리프레시 토큰입니다. 다시 로그인해 주세요.");
         }
 
         // 4. 유저 정보 조회 및 새로운 이중 토큰 생성
