@@ -30,8 +30,9 @@ public class ContentPublishScheduler {
         log.info("[콘텐츠 스케줄러] 예약 게시 알림 체크 시작...");
         LocalDateTime now = LocalDateTime.now();
 
-        // 1. 현재 시간이 지났고, 상태가 'SCHEDULED'인 예약 타겟들 조회
-        List<Content> targetContents = contentRepository.findByScheduledAtLessThanEqualAndStatus(now, "SCHEDULED");
+        // 1. 오늘 00:00:00부터 현재 시각 사이의 예약 타겟들 조회 (과거의 누락된 데이터 오발송 방지)
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        List<Content> targetContents = contentRepository.findByScheduledAtBetweenAndStatus(startOfToday, now, "SCHEDULED");
 
         if (targetContents.isEmpty()) {
             log.info("[콘텐츠 스케줄러] 이번 주기에 발송할 예약 콘텐츠가 없습니다.");
@@ -51,8 +52,13 @@ public class ContentPublishScheduler {
                 String publishLink = "https://contentsmakerstudio.com/publish?contentId="
                         + content.getContentId() + "&token=" + token;
 
-                // 4. 의존성이 완전 분리된 메일 서비스 호출
-                emailService.sendPublishLinkEmail(userEmail, content.getTitle(),publishLink);
+                // 4. 메일 수신여부가 'Y'인 경우에만 의존성이 완전 분리된 메일 서비스 호출
+                if ("Y".equalsIgnoreCase(user.getEmailOnPublish())) {
+                    emailService.sendPublishLinkEmail(userEmail, content.getTitle(), publishLink);
+                    log.info("[예약 완료] Content ID: {} -> 메일 발송 성공 (수신 여부: Y)", content.getContentId());
+                } else {
+                    log.info("[예약 완료] Content ID: {} -> 메일 발송 건너뜀 (수신 여부: N)", content.getContentId());
+                }
 
                 // 5. 성공 시 비즈니스 상태를 'PUBLISHED'로 변경하여 비즈니스 주기 완료 처리
                 content.publishNotificationSent(token);

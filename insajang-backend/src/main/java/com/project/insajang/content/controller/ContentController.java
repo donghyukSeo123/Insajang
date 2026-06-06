@@ -145,6 +145,18 @@ public class ContentController {
     }
 
     /**
+     * 컨텐츠 예약 일정 취소 (캘린더에서 제거)
+     */
+    @PostMapping("/cancel-schedule/{contentId}")
+    public ResponseEntity<ContentResponse> cancelSchedule(
+            @PathVariable Long contentId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        ContentResponse response = contentService.cancelSchedule(contentId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 1. 캘린더 화면 범위에 따른 일정 목록 조회
      * @param start 조회 시작일 (FullCalendar에서 전달)
      * @param end   조회 종료일 (FullCalendar에서 전달)

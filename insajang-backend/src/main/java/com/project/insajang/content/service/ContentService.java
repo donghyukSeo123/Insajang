@@ -48,6 +48,7 @@ public class ContentService {
         pythonRequest.put("title", request.getTitle());
         pythonRequest.put("user_input", request.getUser_input());
         pythonRequest.put("content_type", request.getContent_type());
+        pythonRequest.put("selectedPersona", request.getSelectedPersona()); // 페르소나(말투) 파라미터 추가
 
         // AI 결과 수신
         Map<String, Object> pythonResponse = restTemplate.postForObject(pythonUrl, pythonRequest, Map.class);
@@ -184,10 +185,28 @@ public class ContentService {
         return ContentResponse.builder()
                 .projectId(content.getProjectId())
                 .contentId(content.getContentId())
-                .createdAt(content.getCreatedAt())
+                .logId(content.getLogId())
                 .title(content.getTitle())
-                .body(content.getBody())      // 엔티티의 body(HTML)를 DTO의 content에 매핑
+                .body(content.getBody())
+                .contentType(content.getContentType())
+                .status(content.getStatus())
+                .createdAt(content.getCreatedAt())
+                .scheduledAt(content.getScheduledAt())
                 .build();
+    }
+
+    /**
+     * 콘텐츠 예약 일정 취소 (캘린더에서 제거하고 DRAFT 상태로 전환)
+     */
+    @Transactional
+    public ContentResponse cancelSchedule(Long contentId) {
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 컨텐츠를 찾을 수 없습니다. ID: " + contentId));
+
+        content.setScheduledAt(null);
+        content.setStatus("READY"); // 캘린더에서 제외하고 READY(준비됨) 상태로 복원
+
+        return ContentResponse.fromEntity(content);
     }
 
 

@@ -116,6 +116,7 @@ public class UserService {
                 .name(request.getName())
                 .nickname(request.getNickname())
                 .role("USER") // 기본 권한 설정
+                .emailOnPublish("Y") // 기본 수신 여부 'Y'
                 .build();
 
         userRepository.save(user);
@@ -208,6 +209,35 @@ public class UserService {
         tokens.put("refreshToken", newRefreshTokenStr);
 
         return tokens;
+    }
+
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+    }
+
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        user.updatePassword(encodedNewPassword);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void updateSettings(Long userId, boolean emailOnPublish) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+
+        String val = emailOnPublish ? "Y" : "N";
+        user.updateEmailOnPublish(val);
+        userRepository.save(user);
     }
 
     @Getter

@@ -25,4 +25,10 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
      * 현재 상태(status)가 'SCHEDULED'(게시예약)인 콘텐츠 목록만 딱 긁어옵니다.
      */
     List<Content> findByScheduledAtLessThanEqualAndStatus(LocalDateTime dateTime, String status);
+
+    /**
+     * 예약 시각(scheduledAt)이 시작 시각과 종료 시각 사이(예: 오늘 시작시각 ~ 현재시각)이면서
+     * 현재 상태(status)가 'SCHEDULED'(게시예약)인 콘텐츠 목록만 긁어옵니다.
+     */
+    List<Content> findByScheduledAtBetweenAndStatus(LocalDateTime startDateTime, LocalDateTime endDateTime, String status);
 }

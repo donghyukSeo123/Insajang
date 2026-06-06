@@ -9,4 +9,5 @@ public class ContentCreateRequest {
     private String title;
     private String user_input;
     private String content_type;
+    private String selectedPersona;
 }

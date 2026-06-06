@@ -31,5 +31,19 @@ public class User {
     @Column(nullable = false)
     private String role; // 예: "USER", "ADMIN"
 
+    @Builder.Default
+    @Column(name = "email_on_publish", nullable = false, length = 1)
+    private String emailOnPublish = "Y"; // 기본값 'Y'
+
+    // 비밀번호 수정용 편의 메서드
+    public void updatePassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    // 메일 수신여부 수정용 편의 메서드
+    public void updateEmailOnPublish(String emailOnPublish) {
+        this.emailOnPublish = emailOnPublish;
+    }
+
     // [참고] 생성일, 수정일 등은 나중에 BaseEntity로 뺄 수 있습니다.
 }
