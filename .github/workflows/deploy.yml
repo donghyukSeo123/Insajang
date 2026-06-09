@@ -1,0 +1,36 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Remote Commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # 1. 루트 폴더(백엔드 및 컴포즈) 최신화
+            cd ~/Insajang
+            git fetch --all
+            git reset --hard origin/master
+
+            # 2. 프론트엔드 폴더 최신화
+            cd ~/Insajang/insajang-frontend
+            git fetch --all
+            git reset --hard origin/master
+
+            # 3. 파이썬 폴더 최신화
+            cd ~/Insajang/insajang-python
+            git fetch --all
+            git reset --hard origin/master
+
+            # 4. 수정된 컨테이너만 백그라운드로 빌드 및 기동
+            cd ~/Insajang
+            docker compose up --build -d

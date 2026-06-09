@@ -1,1 +1,9 @@
 /insajang-frontend/
+/insajang-python/
+/uploads/
+.env
+insajang-key.pem
+Study_*.md
+TIL_*.md
+git
+/.idea/
