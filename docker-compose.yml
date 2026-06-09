@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. 데이터베이스 서비스 (PostgreSQL)
+  insajang-db:
+    image: postgres:15-alpine
+    container_name: insajang-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: insajang
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1234" # 기존 설정값 유지
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  # 2. 파이썬 AI 서비스 (FastAPI + Gemini)
+  insajang-python:
+    build:
+      context: ./insajang-python
+      dockerfile: Dockerfile
+    container_name: insajang-python
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: always
+
+  # 3. 스프링부트 백엔드 서비스
+  insajang-backend:
+    build:
+      context: ./insajang-backend
+      dockerfile: Dockerfile
+    container_name: insajang-backend
+    environment:
+      # 호스트 localhost 대신 도커 네트워크 상의 DB 주소(insajang-db)로 매핑
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://insajang-db:5432/insajang
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=1234
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+    depends_on:
+      - insajang-db
+    restart: always
+
+  # 4. 프론트엔드 및 라우팅 서비스 (React + Nginx)
+  insajang-frontend:
+    build:
+      context: ./insajang-frontend
+      dockerfile: Dockerfile
+    container_name: insajang-frontend
+    ports:
+      - "80:80" # 외부 포트 80(HTTP) 오픈
+    depends_on:
+      - insajang-backend
+    restart: always
+
+volumes:
+  postgres_data: # DB 데이터를 영구 보존하기 위한 볼륨 정의
