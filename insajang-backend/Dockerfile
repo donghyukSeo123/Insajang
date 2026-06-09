@@ -10,7 +10,7 @@ COPY src ./src
 RUN gradle build -x test --no-daemon
 
 # 2단계: 실행 스테이지 (가벼운 JRE 17 이미지 사용)
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 
 # 1단계 빌드 결과물 중 JAR 파일만 실행 환경으로 가져옴
