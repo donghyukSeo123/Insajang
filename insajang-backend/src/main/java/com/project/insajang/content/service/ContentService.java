@@ -39,10 +39,13 @@ public class ContentService {
     private final FileService fileService;
     private final FileRepository fileRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.python-url}")
+    private String pythonUrl;
+
     public Map<String, String> processAndSaveContentlog(ContentCreateRequest request, String userId) throws IOException {
 
         // 1. 파이썬 서버(AI)에 데이터 전송 및 결과 수신
-        String pythonUrl = "http://localhost:8000/generate-content";
+        String targetUrl = pythonUrl + "/generate-content";
 
         Map<String, Object> pythonRequest = new HashMap<>();
         pythonRequest.put("title", request.getTitle());
@@ -51,7 +54,7 @@ public class ContentService {
         pythonRequest.put("selectedPersona", request.getSelectedPersona()); // 페르소나(말투) 파라미터 추가
 
         // AI 결과 수신
-        Map<String, Object> pythonResponse = restTemplate.postForObject(pythonUrl, pythonRequest, Map.class);
+        Map<String, Object> pythonResponse = restTemplate.postForObject(targetUrl, pythonRequest, Map.class);
         String generatedResult = String.valueOf(pythonResponse.get("generated_text"));
         String generatedTitle = String.valueOf(pythonResponse.get("generated_title"));
         String base64Data = String.valueOf(pythonResponse.get("img_data"));
