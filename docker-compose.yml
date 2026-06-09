@@ -44,6 +44,8 @@ services:
     depends_on:
       - insajang-db
       - insajang-python
+    volumes:
+      - ./uploads:/app/uploads
     restart: always
 
   # 4. 프론트엔드 및 라우팅 서비스 (React + Nginx)
