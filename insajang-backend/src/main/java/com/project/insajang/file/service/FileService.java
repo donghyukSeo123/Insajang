@@ -64,9 +64,9 @@ public class FileService {
         return fileRepository.save(fileEntity);
     }
 
-    // 리액트에게 던져줄 '완성형 URL' 생성 메서드
+    // 리액트에게 던져줄 상대 경로 URL 생성 메서드
     public String getFullImageUrl(FileEntity fileEntity) {
-        return backendUrl + fileEntity.getFilePath() + fileEntity.getSavedName();
+        return fileEntity.getFilePath() + fileEntity.getSavedName();
     }
 
     @Transactional
