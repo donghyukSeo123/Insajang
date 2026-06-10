@@ -17,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -54,7 +57,30 @@ public class ContentService {
         pythonRequest.put("selectedPersona", request.getSelectedPersona()); // 페르소나(말투) 파라미터 추가
 
         // AI 결과 수신
-        Map<String, Object> pythonResponse = restTemplate.postForObject(targetUrl, pythonRequest, Map.class);
+        Map<String, Object> pythonResponse;
+        try {
+            pythonResponse = restTemplate.postForObject(targetUrl, pythonRequest, Map.class);
+        } catch (HttpStatusCodeException ex) {
+            log.error("AI 서버 통신 에러: {} - {}", ex.getStatusCode(), ex.getResponseBodyAsString());
+            if (ex.getStatusCode().value() == 429) {
+                String errorMsg = "Gemini API 일일 할당량(20회)을 모두 초과했습니다. 잠시 후 혹은 내일 다시 시도해 주세요.";
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    Map<String, Object> errMap = mapper.readValue(ex.getResponseBodyAsString(), Map.class);
+                    if (errMap.containsKey("error")) {
+                        errorMsg = String.valueOf(errMap.get("error"));
+                    }
+                } catch (Exception parseEx) {
+                    log.warn("파이썬 에러 응답 파싱 실패", parseEx);
+                }
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, errorMsg);
+            }
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스가 일시적으로 원활하지 않습니다. 잠시 후 다시 시도해 주세요.");
+        } catch (Exception ex) {
+            log.error("AI 서버 연결 실패", ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서버와의 통신에 실패했습니다. 연결 상태를 확인해 주세요.");
+        }
+
         String generatedResult = String.valueOf(pythonResponse.get("generated_text"));
         String generatedTitle = String.valueOf(pythonResponse.get("generated_title"));
         String base64Data = String.valueOf(pythonResponse.get("img_data"));
