@@ -15,6 +15,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 20m
           script: |
             # 1. 루트 폴더(백엔드 및 컴포즈) 최신화
             cd ~/Insajang
@@ -31,6 +32,9 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
-            # 4. 수정된 컨테이너만 백그라운드로 빌드 및 기동
+            # 4. 순차 빌드를 통해 프리티어 메모리 고갈 방지 및 실행
             cd ~/Insajang
-            docker compose up --build -d
+            docker compose build insajang-python
+            docker compose build insajang-frontend
+            docker compose build insajang-backend
+            docker compose up -d
