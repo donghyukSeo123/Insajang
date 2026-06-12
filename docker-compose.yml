@@ -58,9 +58,12 @@ services:
       dockerfile: Dockerfile
     container_name: insajang-frontend
     ports:
-      - "80:80" # 외부 포트 80(HTTP) 오픈
+      - "80:80"   # HTTP 포트
+      - "443:443" # HTTPS 포트
     environment:
       - TZ=Asia/Seoul
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - insajang-backend
     restart: always
