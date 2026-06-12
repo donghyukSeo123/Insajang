@@ -15,11 +15,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // 1. 모든 주소에 대해
-                .allowedOrigins("http://localhost:3000") // 2. 3000번 포트 허용
-                .allowedMethods("GET", "POST", "PUT", "DELETE") // 3. 주요 방식들 허용
+                .allowedOrigins(frontendUrl, "http://localhost:3000", "https://3-39-22-29.nip.io") // 2. 허용 오리진 리스트 지정
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH") // 3. 방식 허용
                 .allowedHeaders("*"); // 4. 모든 헤더 허용
     }
 
