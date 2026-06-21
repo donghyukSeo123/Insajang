@@ -35,7 +35,7 @@ services:
     container_name: insajang-backend
     environment:
       # 호스트 localhost 대신 도커 네트워크 상의 DB 주소(insajang-db)로 매핑
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://insajang-db:5432/insajang
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://insajang-db:5432/insajang?sslmode=require
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=1234
       - MAIL_USERNAME=${MAIL_USERNAME}
