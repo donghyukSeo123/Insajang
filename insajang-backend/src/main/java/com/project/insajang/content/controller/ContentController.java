@@ -2,6 +2,7 @@ package com.project.insajang.content.controller;
 
 
 import com.project.insajang.content.dto.*;
+import com.project.insajang.content.entity.TopicRecommendation;
 import com.project.insajang.content.service.ContentService;
 import com.project.insajang.user.entity.UserPrincipal;
 import jakarta.persistence.EntityNotFoundException;
@@ -13,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +38,16 @@ public class ContentController {
         Map<String, String> result = contentService.processAndSaveContentlog(request, userId);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/generateAdditionalImage")
+    public ResponseEntity<?> generateAdditionalImage(
+            @RequestBody AdditionalImageRequest request
+    ) throws IOException {
+        String imageUrl = contentService.generateAndSaveAdditionalImage(request);
+        Map<String, String> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/saveGeneratedContent")
@@ -81,6 +93,12 @@ public class ContentController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/recommendations")
+    public ResponseEntity<List<TopicRecommendation>> getTodayRecommendations() {
+        List<TopicRecommendation> recommendations = contentService.getTodayRecommendations();
+        return ResponseEntity.ok(recommendations);
     }
 
     @DeleteMapping("/{contentId}") // 1. 주소창의 {projectId}를 변수로 쓰겠다는 선언

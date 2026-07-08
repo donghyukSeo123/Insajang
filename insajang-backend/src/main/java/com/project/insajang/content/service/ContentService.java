@@ -6,8 +6,11 @@ import com.project.insajang.content.entity.ContentLog;
 import com.project.insajang.content.entity.ContentStatus;
 import com.project.insajang.content.repository.ContentLogRepository;
 import com.project.insajang.content.repository.ContentRepository;
+import com.project.insajang.content.entity.TopicRecommendation;
+import com.project.insajang.content.repository.TopicRecommendationRepository;
 import com.project.insajang.file.entity.FileEntity;
 import com.project.insajang.file.repository.FileRepository;
+import java.time.LocalDate;
 import com.project.insajang.file.service.FileService;
 import com.project.insajang.project.entity.Project;
 import com.project.insajang.project.repository.ProjectRepository;
@@ -41,6 +44,7 @@ public class ContentService {
     private final RestTemplate restTemplate = new RestTemplate(); // 파이썬 통신용 도구
     private final FileService fileService;
     private final FileRepository fileRepository;
+    private final TopicRecommendationRepository topicRecommendationRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.python-url}")
     private String pythonUrl;
@@ -48,7 +52,7 @@ public class ContentService {
     public Map<String, String> processAndSaveContentlog(ContentCreateRequest request, String userId) throws IOException {
 
         // 1. 파이썬 서버(AI)에 데이터 전송 및 결과 수신
-        String targetUrl = pythonUrl + "/generate-content";
+        String targetUrl = (pythonUrl != null ? pythonUrl.trim() : "") + "/generate-content";
 
         Map<String, Object> pythonRequest = new HashMap<>();
         pythonRequest.put("title", request.getTitle());
@@ -83,8 +87,8 @@ public class ContentService {
 
         String generatedResult = String.valueOf(pythonResponse.get("generated_text"));
         String generatedTitle = String.valueOf(pythonResponse.get("generated_title"));
-        String base64Data = String.valueOf(pythonResponse.get("img_data"));
-        String extension = String.valueOf(pythonResponse.get("extension"));
+        String base64Data = pythonResponse.get("img_data") != null ? String.valueOf(pythonResponse.get("img_data")) : null;
+        String extension = pythonResponse.get("extension") != null ? String.valueOf(pythonResponse.get("extension")) : null;
 
         ContentLog log = ContentLog.builder()
                 .projectId(request.getProject_id())
@@ -98,27 +102,23 @@ public class ContentService {
 
         ContentLog savedLog = contentLogRepository.save(log);
 
-        //파일저장
-        FileEntity savedFile = fileService.saveAiImage(savedLog,base64Data,extension);
+        String finalHtml = generatedResult;
 
-        String fullImageUrl = fileService.getFullImageUrl(savedFile);
-
-        String imgTag = String.format(
-                "<p style='text-align: center; margin-top: 20px; margin-bottom: 5px;'>" +
-                        "  <img src='%s' style='max-width: 100%%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);' />" +
-                        "</p>" +
-                        "<p style='text-align: center; color: #888; font-size: 0.9em; margin-top: 0; margin-bottom: 20px;'>" +
-                        "  [AI가 생성한 이미지입니다]" +
-                        "</p>",
-                fullImageUrl
-        );
-
-        // 3. [IMAGE_HERE] 치환자로 이미지 박아넣기!
-        // 파이썬이 준 HTML 본문에서 글자만 슥 바꿔주면 끝납니다.
-        String finalHtml = generatedResult.replace("[IMAGE_HERE]", imgTag);
-
-        //저장된 파일과 html 합치기
-
+        // 파일저장 (이미지가 전달되었을 때만 처리)
+        if (base64Data != null && !base64Data.equals("null")) {
+            FileEntity savedFile = fileService.saveAiImage(savedLog, base64Data, extension);
+            String fullImageUrl = fileService.getFullImageUrl(savedFile);
+            String imgTag = String.format(
+                    "<p style='text-align: center; margin-top: 20px; margin-bottom: 5px;'>" +
+                            "  <img src='%s' style='max-width: 100%%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);' />" +
+                            "</p>" +
+                            "<p style='text-align: center; color: #888; font-size: 0.9em; margin-top: 0; margin-bottom: 20px;'>" +
+                            "  [AI가 생성한 이미지입니다]" +
+                            "</p>",
+                    fullImageUrl
+            );
+            finalHtml = generatedResult.replace("[IMAGE_HERE]", imgTag);
+        }
 
         // 3. 리액트에게는 AI가 만든 텍스트만 돌려줍니다.
         Map<String, String> result = new HashMap<>();
@@ -128,6 +128,32 @@ public class ContentService {
         result.put("content_type", request.getContent_type());
 
         return result;
+    }
+
+    @Transactional
+    public String generateAndSaveAdditionalImage(AdditionalImageRequest request) throws IOException {
+        // 1. 원본 로그(ContentLog) 조회
+        ContentLog contentLog = contentLogRepository.findById(request.getLogId())
+                .orElseThrow(() -> new EntityNotFoundException("원본 로그를 찾을 수 없습니다."));
+
+        // 2. 파이썬 서버 호출
+        String targetUrl = (pythonUrl != null ? pythonUrl.trim() : "") + "/generate-image";
+
+        Map<String, Object> pythonRequest = new HashMap<>();
+        pythonRequest.put("prompt", request.getPrompt());
+
+        Map<String, Object> pythonResponse = restTemplate.postForObject(targetUrl, pythonRequest, Map.class);
+        if (pythonResponse == null || !pythonResponse.containsKey("img_data")) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "AI 이미지 생성 응답이 올바르지 않습니다.");
+        }
+
+        String base64Data = String.valueOf(pythonResponse.get("img_data"));
+        String extension = String.valueOf(pythonResponse.get("extension"));
+
+        // 3. 파일 물리 저장 및 DB 등록
+        FileEntity savedFile = fileService.saveAiImage(contentLog, base64Data, extension);
+
+        return fileService.getFullImageUrl(savedFile);
     }
 
     @Transactional
@@ -329,5 +355,58 @@ public class ContentService {
         return contents.stream()
                 .map(ContentResponse::fromEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<TopicRecommendation> syncRecommendations(LocalDate date) {
+        log.info("파이썬 AI 서버로부터 추천 주제 동기화 시작: {}", date);
+
+        // 1. 기존 해당 날짜의 추천 데이터 삭제 (중복 방지)
+        List<TopicRecommendation> existing = topicRecommendationRepository.findByRecommendDate(date);
+        if (!existing.isEmpty()) {
+            topicRecommendationRepository.deleteAll(existing);
+        }
+
+        // 2. 파이썬 서버 호출
+        String targetUrl = (pythonUrl != null ? pythonUrl.trim() : "") + "/recommend-topics";
+        Map<String, Object> pythonRequest = new HashMap<>();
+        pythonRequest.put("today_str", date.toString());
+
+        try {
+            List<Map<String, Object>> responseList = restTemplate.postForObject(targetUrl, pythonRequest, List.class);
+            if (responseList == null) {
+                log.warn("파이썬 서버에서 받은 추천 리스트가 비어있습니다.");
+                return List.of();
+            }
+
+            // 3. 수신된 JSON 데이터 파싱 및 저장
+            for (Map<String, Object> item : responseList) {
+                String title = String.valueOf(item.get("title"));
+                String keywords = String.valueOf(item.get("keywords"));
+
+                TopicRecommendation recommendation = TopicRecommendation.builder()
+                        .title(title)
+                        .keywords(keywords)
+                        .recommendDate(date)
+                        .build();
+                topicRecommendationRepository.save(recommendation);
+            }
+        } catch (Exception ex) {
+            log.error("파이썬 AI 추천 주제 수신 오류", ex);
+        }
+
+        return topicRecommendationRepository.findByRecommendDate(date);
+    }
+
+    @Transactional
+    public List<TopicRecommendation> getTodayRecommendations() {
+        LocalDate today = LocalDate.now();
+        List<TopicRecommendation> list = topicRecommendationRepository.findByRecommendDate(today);
+
+        // 오늘 날짜의 추천 데이터가 없다면, 동적으로 동기화하여 가져옴 (배치 실패 시 대비)
+        if (list.isEmpty()) {
+            list = syncRecommendations(today);
+        }
+        return list;
     }
 }
